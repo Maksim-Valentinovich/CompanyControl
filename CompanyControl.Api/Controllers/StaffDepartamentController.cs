@@ -30,7 +30,7 @@ namespace CompanyControl.Api.Controllers
 
             var newEmployee = Context.Employees.Last();
             string json = JsonSerializer.Serialize(newEmployee);
-            return Ok();
+            return Ok(json);
         }
 
         public IActionResult UpdateEmployee(int? employeeId, string name, string surname, string middleName, Position position)
@@ -51,7 +51,7 @@ namespace CompanyControl.Api.Controllers
 
             var employees = Context.Employees.Select(x => x);
             string json = JsonSerializer.Serialize(employees);
-            return Ok();
+            return Ok(json);
         }
 
         public IActionResult DeleteEmployee(int? employeeId)
@@ -68,12 +68,14 @@ namespace CompanyControl.Api.Controllers
 
         public IActionResult GetEmployees(Position? position)
         {
+            string json = string.Empty;
+
             if (position != null)
             {
                 if (Context.Employees.Any(x => x.Position == position))
                 {
                     var employees = Context.Employees.Select(x => x);
-                    string json = JsonSerializer.Serialize(employees);
+                    json = JsonSerializer.Serialize(employees);
                 }
                 else
                 {
@@ -83,10 +85,10 @@ namespace CompanyControl.Api.Controllers
             else
             {
                 var employees = Context.Employees.Select(x => x.Position == position);
-                string json = JsonSerializer.Serialize(employees);
+                json = JsonSerializer.Serialize(employees);
             }
 
-            return Ok();
+            return Ok(json);
         }
     }
 }
