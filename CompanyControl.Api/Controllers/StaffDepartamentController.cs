@@ -88,7 +88,7 @@ namespace CompanyControl.Api.Controllers
                 json = JsonSerializer.Serialize(employees);
             }
 
-            return Ok();
+            return Ok(json);
         }
     }
 }
