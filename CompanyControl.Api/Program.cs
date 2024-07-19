@@ -12,6 +12,7 @@ builder.Services.AddSwaggerGen();
 
 var connectionString = builder.Configuration.GetConnectionString("Default");
 builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseSqlite(connectionString));
+builder.Services.AddAutoMapper(typeof(Program));
 
 var app = builder.Build();
 

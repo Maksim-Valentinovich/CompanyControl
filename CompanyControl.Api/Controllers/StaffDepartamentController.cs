@@ -1,94 +1,96 @@
-﻿using CompanyControl.Domain;
+﻿using AutoMapper;
+using CompanyControl.Api.Dto.StaffDepartament;
+using CompanyControl.Domain;
 using CompanyControl.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace CompanyControl.Api.Controllers
 {
     public class StaffDepartamentController : BaseApiController
     {
-        public StaffDepartamentController(ApplicationDbContext context) : base(context)
+        public StaffDepartamentController(ApplicationDbContext context, IMapper mapper) : base(context, mapper)
         {
         }
 
-        public IActionResult AddEmployee(string name, string surname, Position? position)
+        [HttpPost("[action]")]
+        public IActionResult AddEmployee(CreateEmployeeDto input)
         {
-            if (name == null || surname == null || position == null)
-            {
-                return BadRequest();
-            }
-
-            Context.Employees.Add(new Employee
-            {
-                Id = Context.Employees.Last().Id + 1,
-                Name = name,
-                Surname = surname,
-
-            });
+            var employee = Mapper.Map<Employee>(input);
+            Context.Employees.Add(employee);
             Context.SaveChanges();
 
-            var newEmployee = Context.Employees.Last();
-            string json = JsonSerializer.Serialize(newEmployee);
-            return Ok(json);
+            return Ok(employee);
         }
 
-        public IActionResult UpdateEmployee(int? employeeId, string name, string surname, string middleName, Position position)
+        [HttpPut("[action]")]
+        public IActionResult UpdateEmployee(UpdateEmployeeDto input)
         {
-            if (employeeId == null || !Context.Employees.Any(s => s.Id == employeeId))
+            var employee = Context.Employees.Find(input.Id);
+            if (employee == null)
             {
                 return BadRequest();
             }
 
-            Context.Employees.Where(x => x.Id == employeeId)
-                .ExecuteUpdate(s => s
-                    .SetProperty(p => p.Name, p => name)
-                    .SetProperty(p => p.Surname, p => surname)
-                    .SetProperty(p => p.MiddleName, p => middleName)
-                    .SetProperty(p => p.Position, p => position));
-
+            Mapper.Map(input, employee);
+            Context.Employees.Update(employee);
             Context.SaveChanges();
 
-            var employees = Context.Employees.Select(x => x);
-            string json = JsonSerializer.Serialize(employees);
-            return Ok(json);
+            return Ok();
         }
 
-        public IActionResult DeleteEmployee(int? employeeId)
+        [HttpDelete("[action]")]
+        public IActionResult DeleteEmployee(int employeeId)
         {
-            if (employeeId == null || !Context.Employees.Any(s => s.Id == employeeId))
+            var employee = Context.Employees.Find(employeeId);
+            if (employee == null) 
             {
                 return BadRequest();
             }
-            Context.Employees.Select(s => s.Id == employeeId).ExecuteDelete();
 
+            Context.Employees.Remove(employee);
             Context.SaveChanges();
             return Ok();
         }
 
+        [HttpGet("[action]")]
         public IActionResult GetEmployees(Position? position)
         {
-            string json = string.Empty;
-
-            if (position != null)
+            IQueryable<Employee> query = Context.Employees.Include(e => e.Shifts);
+            if (position.HasValue)
             {
-                if (Context.Employees.Any(x => x.Position == position))
-                {
-                    var employees = Context.Employees.Select(x => x);
-                    json = JsonSerializer.Serialize(employees);
-                }
-                else
-                {
-                    return BadRequest();
-                }
-            }
-            else
-            {
-                var employees = Context.Employees.Select(x => x.Position == position);
-                json = JsonSerializer.Serialize(employees);
+                query = query.Where(e => e.Position == position);
             }
 
-            return Ok(json);
+            var employees = query.ToList();
+            var result = new List<EmployeeDto>();
+
+            foreach (var employee in employees)
+            {
+                var dto = Mapper.Map<EmployeeDto>(employee);
+                dto.Fails = employee.Shifts
+                    .Where(s => s.IsFail)
+                    .GroupBy(s => s.Start.ToString("MM.yyyy"))
+                    .Select(g => new FailDto
+                    {
+                        Month = g.Key,
+                        Count = g.Count(),
+                    });
+
+                result.Add(dto);
+            }
+
+            return Ok(result);
+        }
+
+        [HttpGet("[action]")]
+        public IActionResult GetPositions() 
+        {
+            var positionValues = Enum.GetValues<Position>().ToList();
+            var positions = Mapper.Map<IEnumerable<PositionDto>>(positionValues);
+            return Ok(positions);
         }
     }
 }

@@ -7,8 +7,6 @@ namespace CompanyControl.Domain.Entities
         public required string Surname { get; set; }
         public required string Name { get; set; }
         public string? MiddleName { get; set; }
-
-        [NotMapped]
         public string FullName => $"{Surname} {Name} {MiddleName}";
 
         public Position Position { get; set; }
